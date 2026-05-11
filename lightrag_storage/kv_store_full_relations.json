@@ -1,0 +1,38 @@
+{
+  "doc-a69b017da83d7dcb3d97244c661a431c": {
+    "relation_pairs": [
+      [
+        "Department",
+        "Instructor"
+      ],
+      [
+        "Course",
+        "Student"
+      ],
+      [
+        "Carbon-Fiber Spikes",
+        "Noah Carter"
+      ],
+      [
+        "Department",
+        "Student"
+      ],
+      [
+        "World Athletics Championship",
+        "World Athletics Federation"
+      ],
+      [
+        "Car",
+        "Instructor"
+      ],
+      [
+        "100m Sprint Record",
+        "World Athletics Championship"
+      ]
+    ],
+    "count": 7,
+    "create_time": 1778447325,
+    "update_time": 1778447325,
+    "_id": "doc-a69b017da83d7dcb3d97244c661a431c"
+  }
+}

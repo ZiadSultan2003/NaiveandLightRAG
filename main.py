@@ -1,152 +1,146 @@
 import os
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename
+import shutil
+import httpx
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, JSONResponse
 
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
+# استيراد LangChain
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from dotenv import load_dotenv
 
-from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
+# استيراد مكتبة Groq
+from groq import Groq
+load_dotenv()
+# =========================
+# 1. إعدادات التطبيق والمسارات
+# =========================
+app = FastAPI()
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-import torch
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# مسار تخزين الموديلات محلياً
+os.environ["HF_HOME"] = os.path.join(BASE_DIR, "my_models")
 
 # =========================
-# Cache
+# 2. محرك Groq (The Modern AI Engine)
 # =========================
-os.environ["HF_HOME"] = "E:\\hf_cache"
-
-
-# =========================
-# 1. Select file
-# =========================
-Tk().withdraw()
-file_path = askopenfilename()
-
-print("Selected file:", file_path)
-
-if not file_path:
-    exit()
-
-
-# =========================
-# 2. Load document
-# =========================
-ext = os.path.splitext(file_path)[1].lower()
-
-if ext == ".pdf":
-    loader = PyPDFLoader(file_path)
-elif ext == ".docx":
-    loader = Docx2txtLoader(file_path)
-else:
-    print("Unsupported file")
-    exit()
-
-docs = loader.load()
-
+def ask_llm(prompt: str):
+    # الكي بتاعك اللي شغال
+    api_key = os.getenv("GROQ_API_KEY")
+    
+    client = Groq(api_key=api_key)
+    
+    try:
+        # استخدام الموديل الجديد المتاح حالياً
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant", 
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant. Use the provided context to answer the user's question accurately."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5,
+            max_tokens=1024,
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"❌ Groq Error: {e}")
+        return f"❌ Error from Groq: {str(e)}"
 
 # =========================
-# 3. Chunking
-# =========================
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=100
-)
-
-chunks = splitter.split_documents(docs)
-
-
-# =========================
-# 4. Embeddings
+# 3. محرك الـ Embeddings
 # =========================
 embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={'device': 'cpu'}
 )
 
+# =========================
+# 4. الـ Prompt & Helpers
+# =========================
+full_prompt = "Context:\n{context}\n\nQuestion: {input}\n\nAnswer in detail using only the provided context:"
+
+def load_document(path):
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".pdf": return PyPDFLoader(path)
+    elif ext == ".docx": return Docx2txtLoader(path)
+    elif ext == ".txt": return TextLoader(path)
+    return None
+
+def format_docs(docs):
+    return "\n\n".join(d.page_content for d in docs) if docs else "No context available."
 
 # =========================
-# 5. Vector DB
+# 5. واجهة المستخدم (UI)
 # =========================
-db = Chroma.from_documents(
-    documents=chunks,
-    embedding=embeddings,
-    persist_directory="E:\\rag_project\\chroma_db"
-)
-
-retriever = db.as_retriever(search_kwargs={"k": 3})
-
-
-# =========================
-# 6. LLM (Pipeline)
-# =========================
-model_id = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    device_map="cpu",
-    torch_dtype=torch.float32
-)
-
-pipe = pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    max_new_tokens=200,
-    temperature=0.2,
-    repetition_penalty=1.1,
-    return_full_text=False
-)
-
-llm = HuggingFacePipeline(pipeline=pipe)
-
+@app.get("/", response_class=HTMLResponse)
+def ui():
+    return """
+    <html>
+    <head><title>Groq RAG</title><meta charset="UTF-8"></head>
+    <body style="background:#0f172a; color:white; font-family:sans-serif; text-align:center; padding:50px;">
+        <div style="max-width:700px; margin:auto; background:#1e293b; padding:30px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.5)">
+            <h2 style="color:#22c55e">⚡ Groq + Llama 3.1 RAG System</h2>
+            <p style="color:#94a3b8">Status: Ultra Fast & Stable</p>
+            <input type="file" id="f" style="margin:20px 0; background:#334155; padding:10px; border-radius:5px;"><br>
+            <input id="q" placeholder="Ask your question about the file..." style="width:90%; padding:15px; border-radius:5px; border:none; background:#0f172a; color:white;"><br><br>
+            <button onclick="run()" style="padding:12px 40px; background:#22c55e; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Run Analysis</button>
+            <div id="out" style="text-align:left; margin-top:30px; white-space:pre-wrap; background:#0f172a; padding:20px; border-radius:10px; border:1px solid #334155;"></div>
+        </div>
+        <script>
+        async function run(){
+            let out = document.getElementById("out");
+            let f = document.getElementById("f").files[0];
+            let q = document.getElementById("q").value;
+            if(!f || !q) { alert("Please select file and type question"); return; }
+            out.innerText = "Processing with Llama 3.1... ⚡";
+            let fd = new FormData(); fd.append("file", f); fd.append("question", q);
+            try {
+                let r = await fetch("/rag", {method:"POST", body:fd});
+                let d = await r.json();
+                out.innerText = d.analysis || d.error;
+            } catch(e) { out.innerText = "Connection failed! Check if server is running."; }
+        }
+        </script>
+    </body>
+    </html>
+    """
 
 # =========================
-# 7. Prompt
+# 6. الـ Endpoint الرئيسي
 # =========================
-template = """<|system|>
-Answer the question based ONLY on the context.
-If not found, say "I don't know".
+@app.post("/rag")
+async def rag_endpoint(file: UploadFile = File(...), question: str = Form(...)):
+    path = os.path.join(UPLOAD_DIR, file.filename)
+    try:
+        # 1. حفظ الملف
+        with open(path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
 
-Context:
-{context}</s>
-<|user|>
-{input}</s>
-<|assistant|>"""
-
-prompt = PromptTemplate.from_template(template)
-
-
-# =========================
-# 8. RAG Chain
-# =========================
-rag_chain = (
-    {"context": retriever, "input": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)
-
-
-# =========================
-# 9. Chat
-# =========================
-print("\nChat ready (type 'exit' to quit)\n")
-
-while True:
-    q = input("You: ")
-
-    if q.lower() == "exit":
-        print("Bye 👋")
-        break
-
-    response = rag_chain.invoke(q)
-
-    print("\nBot:\n")
-    print(response)
-    print("-" * 50)
+        # 2. تحميل وتقسيم الملف
+        loader = load_document(path)
+        if not loader: return JSONResponse({"error": "Unsupported file format"}, status_code=400)
+        
+        docs = loader.load()
+        splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
+        chunks = splitter.split_documents(docs)
+        
+        # 3. Vector Search
+        db = Chroma.from_documents(chunks, embeddings)
+        retrieved_docs = db.as_retriever(search_kwargs={"k": 5}).invoke(question)
+        ctx = format_docs(retrieved_docs)
+        
+        # 4. استدعاء Groq
+        final_answer = ask_llm(full_prompt.format(context=ctx, input=question))
+        
+        return {"analysis": final_answer}
+    except Exception as e:
+        print(f"❌ Error during RAG process: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        if os.path.exists(path):
+            os.remove(path)

@@ -1,5 +1,28 @@
+# البيئة الافتراضية
 venv/
+.venv/
+env/
+
+# ملفات السرية والإعدادات
+.env
+
+# مخلفات بايثون
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# بيانات الـ RAG والموديلات (أحجام كبيرة)
 hf_cache/
+my_models/
+models/
 chroma_db/
+lightrag_storage/
+
+# ملفات المستخدم المرفوعة
+uploads/
+
+# ملفات النظام والـ IDE
+.vscode/
+.idea/
+.DS_Store
