@@ -17,6 +17,7 @@ load_dotenv()
 WORKING_DIR = "./lightrag_storage"
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
+    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 # استدعاء الـ Key بأمان من ملف الـ .env
 api_key = os.getenv("GROQ_API_KEY")
@@ -40,7 +41,7 @@ async def groq_llm_interface(prompt, system_prompt=None, history=[], **kwargs) -
 
 # 3. دالة الـ Embeddings
 async def local_embedding(texts: list[str]) -> np.ndarray:
-    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    
     embeddings = model.embed_documents(texts)
     return np.array(embeddings)
 
