@@ -60,5 +60,47 @@
     "create_time": 1778447343,
     "update_time": 1778447343,
     "_id": "hybrid:query:bdf62300995e88251d18474f34f8a52e"
+  },
+  "hybrid:keywords:c17b1cf28c809329e51b29f07ee14efe": {
+    "return": "{\"high_level_keywords\": [\"Property renaming\", \"Student model\", \"Model refactoring\"], \"low_level_keywords\": [\"Property Name\", \"Student model\", \"Model renaming\", \"Renaming convention\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "According to the document, what should the property Name be renamed to in the Student model?",
+    "queryparam": {
+      "mode": "hybrid",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 40,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1778712289,
+    "update_time": 1778712289,
+    "_id": "hybrid:keywords:c17b1cf28c809329e51b29f07ee14efe"
+  },
+  "hybrid:query:9c9b842db7e15ef85061fc648bb6d97c": {
+    "return": "### Student Model Property Name Renaming\n\nAccording to the document, the property `Name` in the `Student` model should be renamed to `StdName` as per the constraint `Make Name => StdName`.\n\n\n### References\n\n* [1] EFCore Day 02 – Lab",
+    "cache_type": "query",
+    "chunk_id": null,
+    "original_prompt": "According to the document, what should the property Name be renamed to in the Student model?",
+    "queryparam": {
+      "mode": "hybrid",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 40,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "hl_keywords": "Property renaming, Student model, Model refactoring",
+      "ll_keywords": "Property Name, Student model, Model renaming, Renaming convention",
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1778712300,
+    "update_time": 1778712300,
+    "_id": "hybrid:query:9c9b842db7e15ef85061fc648bb6d97c"
   }
 }
