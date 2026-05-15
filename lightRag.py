@@ -17,9 +17,13 @@ load_dotenv()
 WORKING_DIR = "./lightrag_storage"
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
-    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+   
+ 
 
-# استدعاء الـ Key بأمان من ملف الـ .env
+print("⏳ Loading HuggingFace Embeddings model...")
+model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+
 api_key = os.getenv("GROQ_API_KEY")
 
 # 2. محرك Groq المخصص
