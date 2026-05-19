@@ -1,60 +1,74 @@
 import os
-import asyncio
-import tkinter as tk
-from tkinter import filedialog
+import asyncio  # مطلوب للتحكم الصارم في الوقت والـ Lock
 import numpy as np
 from lightrag import LightRAG, QueryParam
 from lightrag.utils import EmbeddingFunc
-from groq import Groq
-from langchain_community.document_loaders import PyPDFLoader
+from groq import Groq, RateLimitError  # 🔥 عملنا import للـ RateLimitError عشان نلقطها
 from langchain_huggingface import HuggingFaceEmbeddings
-from dotenv import load_dotenv  # استيراد المكتبة
+from dotenv import load_dotenv
 
-# تحميل الإعدادات من ملف .env
 load_dotenv()
 
-# 1. إعداد المسارات
 WORKING_DIR = "./lightrag_storage"
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
-   
- 
 
-print("⏳ Loading HuggingFace Embeddings model...")
+print("⏳ Loading HuggingFace Embeddings model for LightRAG...")
 model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-
 api_key = os.getenv("GROQ_API_KEY")
 
-# 2. محرك Groq المخصص
-async def groq_llm_interface(prompt, system_prompt=None, history=[], **kwargs) -> str:
-    client = Groq(api_key=api_key)
-    messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    for h in history:
-        messages.append(h)
-    messages.append({"role": "user", "content": prompt})
-    
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=messages,
-        temperature=kwargs.get("temperature", 0.1),
-    )
-    return response.choices[0].message.content
+# 🔒 قفل صارم لمنع أي تداخل أو طلبات متوازية من الـ LightRAG Workers
+groq_lock = asyncio.Lock()
 
-# 3. دالة الـ Embeddings
+# محرك Groq الذكي المزود بخاصية الـ Auto-Retry عند الـ Rate Limit
+async def groq_llm_interface(prompt, system_prompt=None, history=[], **kwargs) -> str:
+    async with groq_lock:
+        client = Groq(api_key=api_key)
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        for h in history:
+            messages.append(h)
+        messages.append({"role": "user", "content": prompt})
+        
+        max_retries = 5
+        retry_delay = 12.0  # الـ Window المثالية لتصفير الـ TPM في Groq Free Tier
+        
+        for attempt in range(max_retries):
+            try:
+                # تأخير أساسي أمان (2 ثانية) بين كل طلب وطلب طبيعي
+                await asyncio.sleep(2.0)
+                
+                response = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=messages,
+                    temperature=kwargs.get("temperature", 0.1),
+                )
+                return response.choices[0].message.content
+                
+            except RateLimitError as e:
+                # 🚨 هنا بنمسك الـ 429 ونمنع انهيار الـ Pipeline
+                print(f"\n⚠️ [Groq Rate Limit Hit (429)] - Used Tokens exceeded. Sleeping for {retry_delay}s before retry... (Attempt {attempt + 1}/{max_retries})")
+                await asyncio.sleep(retry_delay)
+                # زيادة وقت الانتظار بشكل تصاعدي للمرة القادمة لو لسه مقفول
+                retry_delay *= 1.5 
+                
+            except Exception as e:
+                # لو في إيرور تاني مختلف نخرجه علطول
+                raise e
+                
+        raise RuntimeError("❌ Failed to clear Groq Rate Limit after maximum retries.")
+
 async def local_embedding(texts: list[str]) -> np.ndarray:
-    
     embeddings = model.embed_documents(texts)
     return np.array(embeddings)
 
-# 4. إعداد محرك LightRAG
+# إعداد المحرك مع ضبط حجم الـ Chunks
 rag = LightRAG(
     working_dir=WORKING_DIR,
     llm_model_func=groq_llm_interface,
-    chunk_token_size=600, 
-    chunk_overlap_token_size=100,
+    chunk_token_size=300,          
+    chunk_overlap_token_size=30,   
     embedding_func=EmbeddingFunc(
         embedding_dim=384,
         max_token_size=8192,
@@ -62,65 +76,24 @@ rag = LightRAG(
     )
 )
 
-# 5. دالة اختيار الملف
-def select_file_dialog():
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    file_path = filedialog.askopenfilename(
-        title="إختر ملف الـ PDF لتحليله",
-        filetypes=[("PDF Files", "*.pdf")]
-    )
-    root.destroy()
-    return file_path
+# ─── الدوال المخصصة للاستدعاء الخارجي ───
 
-# 6. التشغيل
-async def run_light_rag():
-    print("\n--- 📂 LightRAG Power Mode ---")
-    
-    if not api_key:
-        print("❌ Error: GROQ_API_KEY not found in .env file")
-        return
-
-    print("⏳ Preparing storage...")
+async def process_lightrag_doc(full_text: str):
+    """دالة لحقن النص وبناء الـ Graph بشكل تتابعي آمن ومقاوم للـ Rate Limit"""
+    if not os.path.exists(WORKING_DIR):
+        os.mkdir(WORKING_DIR)
+        
     await rag.initialize_storages()
-    
-    file_path = select_file_dialog()
-    if not file_path:
-        print("❌ No file selected.")
-        return
+    await rag.ainsert(full_text)
 
-    print(f"✅ Selected: {file_path}")
-
+async def query_lightrag(question: str) -> str:
+    """دالة استعلام الـ Graph الهجين"""
     try:
-        loader = PyPDFLoader(file_path)
-        pages = loader.load()
-        full_text = "\n".join([page.page_content for page in pages])
-        print(f"📄 Pages: {len(pages)}")
+        await rag.initialize_storages()
+        response = await rag.aquery(
+            question, 
+            param=QueryParam(mode="hybrid")
+        )
+        return response
     except Exception as e:
-        print(f"❌ Error reading PDF: {e}")
-        return
-
-    print(f"⏳ Building knowledge graph...")
-    try:
-        await rag.ainsert(full_text)
-        print("\n✅ Graph built successfully!")
-    except Exception as e:
-        print(f"❌ Graph failure: {e}")
-        return 
-    
-    while True:
-        question = input("\n🔎 Ask (or 'exit'): ")
-        if question.lower() in ['exit', 'quit']: break
-            
-        try:
-            response = await rag.aquery(
-                question, 
-                param=QueryParam(mode="hybrid")
-            )
-            print(f"\n🤖 Answer:\n{'-'*30}\n{response}\n{'-'*30}")
-        except Exception as e:
-            print(f"❌ Search error: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(run_light_rag())
+        return f"❌ LightRAG Search error: {str(e)}"
