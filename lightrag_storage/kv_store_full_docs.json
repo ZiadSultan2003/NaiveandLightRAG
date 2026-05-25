@@ -5,5 +5,12 @@
     "create_time": 1779151470,
     "update_time": 1779151470,
     "_id": "doc-7b5109099a3a41e13d5d5d6c1034ed78"
+  },
+  "doc-a69b017da83d7dcb3d97244c661a431c": {
+    "content": "EFCore Day 02 – Lab \n \nUsing EF Create Following Models \nStudent, Department, Course, Instructor, Car \n \nModel Relationships: \n• Student is assigned to one Department. \n• Department can have Many Students. \n• Student have Many Courses. \n• Course is assigned To Many Students. \n• Instructor is assigned To Many Departments. \n• Department have Many Instructors. \n• Instructor may have one car. \n• Car must be owned by Instructor. \n \n[Using DataAnnotations] \nStudent Model Constraints: \n• Student Name MinLength is 3. \n• Student Name MaxLength is 20. \n• Make Name => StdName \n \nDepartment Model Constraints: \n• Department Name MinLength is 2. \n• Department Name MaxLength is 25. \n• Make Name => DeptName using DataAnnotations \nInstructor Model Constraints: \n• Instructor Name MinLength is 3. \n• Instructor Name MaxLength is 20. \n• Make Name => Ins_Name using DataAnnotations \n• Make Id => Ins_Id using DataAnnotations \n \nMake All Crud Operations in Student",
+    "file_path": "unknown_source",
+    "create_time": 1779214679,
+    "update_time": 1779214679,
+    "_id": "doc-a69b017da83d7dcb3d97244c661a431c"
   }
 }
