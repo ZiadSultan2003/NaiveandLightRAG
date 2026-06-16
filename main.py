@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from dotenv import load_dotenv
 
-# استيراد أدوات LangChain
+# استيراد أدوات LangChain الأساسية للـ Naive
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -20,8 +20,10 @@ from deepeval.models.base_model import DeepEvalBaseLLM
 from deepeval.metrics.faithfulness.faithfulness import FaithfulnessMetric
 from deepeval.metrics.answer_relevancy.answer_relevancy import AnswerRelevancyMetric
 
-# 🔥 الـ IMPORT السحري: استدعاء ملف الـ LightRAG المفصل!
+# 🔥 الـ IMPORTS السحرية: استدعاء ملفاتك المخصصة والمفصلة بالظبط!
 from lightRag import process_lightrag_doc, query_lightrag
+from bm25_rag import process_bm25_doc, query_bm25          # الموديل المخصص للـ BM25
+from recursive_rag import process_recursive_doc, query_recursive  # الموديل المخصص للـ Recursive
 
 load_dotenv()
 nest_asyncio.apply() 
@@ -33,9 +35,12 @@ UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.environ["HF_HOME"] = os.path.join(BASE_DIR, "my_models")
 
+# ⚡ توحيد الموديل لـ 70B لحماية الحساب من الـ Rate Limit اليومي لـ 8B
+TARGET_MODEL = "llama-3.3-70b-versatile"
+
 # إعداد الـ Judge لمقاييس الـ DeepEval
 class GroqJudge(DeepEvalBaseLLM):
-    def __init__(self, model_name="llama-3.1-8b-instant"):
+    def __init__(self, model_name=TARGET_MODEL):
         self.model_name = model_name
     @property
     def value(self): return self.model_name
@@ -65,7 +70,7 @@ def ask_llm(prompt: str, json_mode=False):
             messages.insert(0, {"role": "system", "content": "You are a strict evaluation judge. You must output ONLY a valid JSON object with a single key 'score' containing a float between 0.0 and 1.0. No markdown, no code blocks."})
         
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant", 
+            model=TARGET_MODEL, 
             messages=messages,
             temperature=0,
             max_tokens=500,
@@ -103,7 +108,7 @@ def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs) if docs else "No context available."
 
 # ==========================================
-# 7. واجهة المستخدم الموحدة (UI) لاختيار الوضع
+# 7. واجهة المستخدم الموحدة (UI) لدعم الـ 4 أنظمة كاملة
 # ==========================================
 @app.get("/", response_class=HTMLResponse)
 def ui():
@@ -118,7 +123,7 @@ def ui():
             input, button, select { margin:10px 0; padding:12px; border-radius:5px; border:none; font-size:14px; }
             input[type="text"], input[type="number"], select { background:#0f172a; color:white; border: 1px solid #334155; }
             input[type="text"] { width:90%; }
-            select { width: 40%; cursor: pointer; font-weight: bold; color: #22c55e; }
+            select { width: 50%; cursor: pointer; font-weight: bold; color: #22c55e; }
             .config-group { display: flex; justify-content: center; gap: 20px; margin: 15px 0; }
             .config-group label { font-weight: bold; color: #94a3b8; display: flex; flex-direction: column; text-align: left; font-size: 14px; }
             .config-group input { width: 140px; margin-top: 5px; }
@@ -140,6 +145,8 @@ def ui():
             <label style="font-weight:bold; color:#94a3b8">🎯 Select RAG Mode: </label>
             <select id="rag_mode">
                 <option value="naive">Naive RAG (Vector Search)</option>
+                <option value="bm25">BM25 RAG (Custom Keyword Match)</option>
+                <option value="recursive">Recursive Retrieval RAG (Custom Parent-Child)</option>
                 <option value="lightrag">LightRAG (Knowledge Graph)</option>
             </select>
 
@@ -180,7 +187,7 @@ def ui():
             let fd = new FormData(); 
             fd.append("file", f); 
             fd.append("question", q);
-            fd.append("rag_mode", mode); // إرسال الـ Mode المختار للـ backend
+            fd.append("rag_mode", mode); 
             fd.append("chunk_size", chunkSize); 
             fd.append("chunk_overlap", chunkOverlap); 
             
@@ -210,13 +217,13 @@ def ui():
     """
 
 # ==========================================
-# 8. الـ Endpoint المطور والديناميكي بالكامل
+# 8. الـ Endpoint الديناميكي المستدعي لملفاتك الخاصة
 # ==========================================
 @app.post("/rag")
 async def rag_endpoint(
     file: UploadFile = File(...), 
     question: str = Form(...),
-    rag_mode: str = Form("naive"),     # استقبال الـ Mode (naive أو lightrag)
+    rag_mode: str = Form("naive"),     
     chunk_size: int = Form(600),       
     chunk_overlap: int = Form(100)     
 ):
@@ -230,17 +237,36 @@ async def rag_endpoint(
         docs = loader.load()
         full_text = "\n".join([doc.page_content for doc in docs])
 
-        # ─── تنفيذ توليد الإجابة وجلب الـ Context بناءً على الـ Mode ───
+        # ─── توجيه الإدخال والاستعلام لملفاتك المخصصة بالظبط ───
         if rag_mode == "lightrag":
-            # 1. بناء/تحديث الـ Knowledge Graph من خلال الـ Service المستوردة
             await process_lightrag_doc(full_text)
-            # 2. الاستعلام من الـ Graph مباشرة
             final_answer = await query_lightrag(question)
-            # الـ Context هنا يُمثل النصوص المجموعة في الـ Graph كـ Fallback للـ Evaluation
-            ctx_text = full_text[:3000] # نأخذ عينة للسياق لتقييم الـ LLM
+            ctx_text = full_text[:3000] 
             context_list = [ctx_text]
-        else:
-            # تشغيل الـ Naive RAG التقليدي
+
+        elif rag_mode == "bm25":
+            # 1. استدعاء معالجة الـ BM25 من ملفك المخصص
+            process_bm25_doc(full_text, chunk_size=chunk_size)
+            # 2. استرجاع الـ Top Chunks بناءً على دالتك المخصصة
+            retrieved_chunks = query_bm25(question, top_k=4)
+            
+            context_list = retrieved_chunks
+            ctx_text = "\n\n".join(retrieved_chunks)
+            # 3. توليد الإجابة النهائية عبر الـ LLM
+            final_answer = ask_llm(full_prompt.format(context=ctx_text, input=question))
+
+        elif rag_mode == "recursive":
+            # 1. استدعاء المعالجة الهرمية (Parent-Child) من ملفك المخصص
+            process_recursive_doc(full_text, chunk_size=chunk_size)
+            # 2. استرجاع الـ Parent Contexts بناءً على دالتك المخصصة
+            retrieved_parents = query_recursive(question)
+            
+            context_list = retrieved_parents
+            ctx_text = "\n\n".join(retrieved_parents) if retrieved_parents else "No context available."
+            # 3. توليد الإجابة النهائية عبر الـ LLM
+            final_answer = ask_llm(full_prompt.format(context=ctx_text, input=question))
+
+        else: # Naive Mode التقليدي
             splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
             chunks = splitter.split_documents(docs)
             db = Chroma.from_documents(chunks, embeddings)

@@ -1,6 +1,7 @@
 {
   "doc-7b5109099a3a41e13d5d5d6c1034ed78": {
-    "status": "processing",
+    "status": "failed",
+    "error_msg": "Request timed out.",
     "chunks_count": 179,
     "chunks_list": [
       "chunk-efb0bba09919b6b78bfbcd36a58f15ac",
@@ -186,11 +187,12 @@
     "content_summary": "Table of Contents\n \nTitle Page\nCopyright Page\nDedication\nIntroduction\n \nChapter 1 - HELLO \nOn Conversation’s Casting Couch\nChapter 2 - SMALL TALK, BIG DEAL \nOn Striking Up a Tune\nChapter 3 - PAY HEED \nOn the Acrobatics of Attention\nChapter 4 - THE RE...",
     "content_length": 409293,
     "created_at": "2026-05-19T00:44:30.715660+00:00",
-    "updated_at": "2026-05-25T19:19:54.979688+00:00",
+    "updated_at": "2026-06-16T03:21:24.290083+00:00",
     "file_path": "unknown_source",
     "track_id": "insert_20260519_034430_315cd77b",
     "metadata": {
-      "processing_start_time": 1779736794
+      "processing_start_time": 1781578832,
+      "processing_end_time": 1781580084
     }
   },
   "doc-a69b017da83d7dcb3d97244c661a431c": {
@@ -237,6 +239,193 @@
     "updated_at": "2026-05-25T19:19:54.670844+00:00",
     "file_path": "unknown_source",
     "track_id": "insert_20260525_221954_11489af0",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-02aa4529e516f8033b03c805e0b0d3d6": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T17:01:56.899384+00:00",
+    "updated_at": "2026-06-15T17:01:56.899384+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260615_200156_0620ba9e",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-012cea721f89b6fb7230bdb8103aa02a": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T17:28:43.539605+00:00",
+    "updated_at": "2026-06-15T17:28:43.539605+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260615_202843_33f8a74e",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-06693c21bb2b29bc4be1bc2a523857a1": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T17:55:52.127549+00:00",
+    "updated_at": "2026-06-15T17:55:52.127549+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260615_205552_63176778",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-fb809eb0fbe457100ba69f9dd84a39b6": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T22:04:16.466822+00:00",
+    "updated_at": "2026-06-15T22:04:16.466822+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_010416_fc62e4b9",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-63d54a1b75565c68abbe47936d494421": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T22:49:11.591216+00:00",
+    "updated_at": "2026-06-15T22:49:11.591216+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_014911_4064f7b9",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-25b19350c9e4ba7d3aca0894f79e9472": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T22:49:11.592214+00:00",
+    "updated_at": "2026-06-15T22:49:11.592214+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_014911_cab9a09f",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-4e04548fdc58a669201f6dd6adda0fcc": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T22:56:11.569320+00:00",
+    "updated_at": "2026-06-15T22:56:11.569320+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_015611_9e25a470",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-4008c1d8d7ee9d32b71280a4d7b94e27": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-15T23:29:13.907182+00:00",
+    "updated_at": "2026-06-15T23:29:13.907182+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_022913_21c135b5",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-f04f773f95daf0480d5f0361f410151b": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-16T00:02:59.004109+00:00",
+    "updated_at": "2026-06-16T00:02:59.004109+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_030259_53dd0d2a",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-d4e4892c2cd4d6b54d5d51d95e4c8e2a": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-16T00:11:33.679134+00:00",
+    "updated_at": "2026-06-16T00:11:33.679134+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_031133_1849a5fc",
+    "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
+    "metadata": {
+      "is_duplicate": true,
+      "original_doc_id": "doc-a69b017da83d7dcb3d97244c661a431c",
+      "original_track_id": "insert_20260519_211759_227741f7"
+    }
+  },
+  "dup-b503f23d9b6bd5caecb9f95d4b3ebdf6": {
+    "status": "failed",
+    "content_summary": "[DUPLICATE] Original document: doc-a69b017da83d7dcb3d97244c661a431c",
+    "content_length": 953,
+    "chunks_count": 0,
+    "chunks_list": [],
+    "created_at": "2026-06-16T03:00:31.930722+00:00",
+    "updated_at": "2026-06-16T03:00:31.930722+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20260616_060031_802f19f9",
     "error_msg": "Content already exists. Original doc_id: doc-a69b017da83d7dcb3d97244c661a431c, Status: processed",
     "metadata": {
       "is_duplicate": true,
