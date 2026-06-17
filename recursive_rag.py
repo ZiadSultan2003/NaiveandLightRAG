@@ -2,10 +2,10 @@ import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
+from langchain_huggingface import HuggingFaceEmbeddings
 
 STORAGE_DIR = "./recursive_storage"
 
-from langchain_huggingface import HuggingFaceEmbeddings
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2",
     model_kwargs={'device': 'cpu'}
@@ -22,9 +22,15 @@ def process_recursive_doc(full_text: str, chunk_size: int = 600):
     """
     global global_db
     
-    if os.path.exists(STORAGE_DIR):
-        import shutil
-        shutil.rmtree(STORAGE_DIR)
+    # ─── 🛠️ الحل الآمن للـ Windows لمنع File Locking Error ───
+    if global_db is not None:
+        try:
+            # مسح الـ Collection الحالية وتفريغ البيانات برفق بدل مسح الفولدر بالكامل
+            global_db.delete_collection()
+            print("🧹 Existing Chroma collection cleared safely.")
+        except Exception as e:
+            print(f"⚠️ Note: Could not delete collection cleanly: {e}")
+        global_db = None
 
     child_size = chunk_size
     parent_size = chunk_size * 2

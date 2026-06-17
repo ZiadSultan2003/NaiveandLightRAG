@@ -24,6 +24,7 @@ from deepeval.metrics.answer_relevancy.answer_relevancy import AnswerRelevancyMe
 from lightRag import process_lightrag_doc, query_lightrag
 from bm25_rag import process_bm25_doc, query_bm25          # الموديل المخصص للـ BM25
 from recursive_rag import process_recursive_doc, query_recursive  # الموديل المخصص للـ Recursive
+from hierarchical import process_hierarchical_doc, query_hierarchical  # 🔥 الـ Import الجديد للـ Hierarchical
 
 load_dotenv()
 nest_asyncio.apply() 
@@ -147,6 +148,7 @@ def ui():
                 <option value="naive">Naive RAG (Vector Search)</option>
                 <option value="bm25">BM25 RAG (Custom Keyword Match)</option>
                 <option value="recursive">Recursive Retrieval RAG (Custom Parent-Child)</option>
+                <option value="hierarchical">Hierarchical RAG (Parent-Summary-Child Tree)</option>
                 <option value="lightrag">LightRAG (Knowledge Graph)</option>
             </select>
 
