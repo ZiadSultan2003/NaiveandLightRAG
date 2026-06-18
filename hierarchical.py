@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import shutil
 from dotenv import load_dotenv
 from groq import Groq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -42,8 +41,14 @@ def process_hierarchical_doc(full_text: str, chunk_size: int = 600):
     """بناء الشجرة الهرمية: Parent -> Summary -> Child"""
     global global_hierarchical_db
     
-    if os.path.exists(STORAGE_DIR):
-        shutil.rmtree(STORAGE_DIR)
+    # ─── 🛠️ الحل الآمن للـ Windows لمنع File Locking Error ───
+    if global_hierarchical_db is not None:
+        try:
+            global_hierarchical_db.delete_collection()
+            print("🧹 Existing Hierarchical Chroma collection cleared safely.")
+        except Exception as e:
+            print(f"⚠️ Note: Could not delete hierarchical collection cleanly: {e}")
+        global_hierarchical_db = None
 
     child_size = chunk_size
     parent_size = chunk_size * 3  # القطعة الكبيرة تضمن سياق عريض جداً
