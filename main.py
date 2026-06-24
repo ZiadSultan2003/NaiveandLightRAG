@@ -26,7 +26,8 @@ from bm25_rag import process_bm25_doc, query_bm25                 # المودي
 from recursive_rag import process_recursive_doc, query_recursive   # الموديل المخصص للـ Recursive
 from hierarchical import process_hierarchical_doc, query_hierarchical  # الموديل المخصص للـ Hierarchical
 from query_expansion import process_expansion_doc, query_expansion_rag  # الموديل المخصص للـ Query Expansion
-from cached_rag import process_cached_doc, check_semantic_cache, query_cached_rag_context, add_to_cache  # 🔥 الموديل المخصص للـ Cached RAG
+from cached_rag import process_cached_doc, check_semantic_cache, query_cached_rag_context, add_to_cache  # الموديل المخصص للـ Cached RAG
+from stratifiedRag import process_stratified_doc, query_stratified  # 🔥 المعمارية الثامنة المخصصة للـ Stratified RAG
 
 load_dotenv()
 nest_asyncio.apply() 
@@ -111,7 +112,7 @@ def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs) if docs else "No context available."
 
 # ==========================================
-# 7. واجهة المستخدم الموحدة (UI) لدعم الـ 6 أنظمة كاملة
+# 7. واجهة المستخدم الموحدة (UI) لدعم الـ 8 أنظمة كاملة
 # ==========================================
 @app.get("/", response_class=HTMLResponse)
 def ui():
@@ -153,6 +154,7 @@ def ui():
                 <option value="hierarchical">Hierarchical RAG (Parent-Summary-Child Tree)</option>
                 <option value="expansion">Query Expansion RAG (Multi-Query Phrasing)</option>
                 <option value="cached">Cached RAG (Semantic & Exact Cache Layer)</option>
+                <option value="stratified">Stratified RAG (Multi-Layer Strata Retrieval)</option>
                 <option value="lightrag">LightRAG (Knowledge Graph)</option>
             </select>
 
@@ -278,26 +280,32 @@ async def rag_endpoint(
             ctx_text = "\n\n---\n\n".join(retrieved_expansion) if retrieved_expansion else "No context available."
             final_answer = ask_llm(full_prompt.format(context=ctx_text, input=question))
 
+        elif rag_mode == "stratified":
+            # 🔥 1. استدعاء المعالجة الطبقية متعددة المستويات من ملفك الجديد
+            process_stratified_doc(full_text, chunk_size=chunk_size)
+            # 2. استرجاع السياق المدمج المخلوط من الـ 3 طبقات (L0 + L1 + L2)
+            retrieved_strata = query_stratified(question)
+            context_list = retrieved_strata
+            ctx_text = "\n\n---\n\n".join(retrieved_strata) if retrieved_strata else "No context available."
+            # 3. التوليد عبر الـ LLM
+            final_answer = ask_llm(full_prompt.format(context=ctx_text, input=question))
+
         elif rag_mode == "cached":
-            # 🔥 1. التشييك الفوري على الكاش الدلالي لحماية موارد السيرفر والتوكنز
             cached_response = check_semantic_cache(question)
             if cached_response:
                 return {
                     "analysis": cached_response,
                     "evaluation": {
                         "precision": "100%", "recall": "100%", "faithfulness": "100%",
-                        "relevance": "100%", "utilization": "100%", "hallucination_rate": "0%", "original_score": "100%", "correctness": "100%"
+                        "relevance": "100%", "utilization": "100%", "hallucination_rate": "0%", "correctness": "100%"
                     }
                 }
             
-            # 2. [Cache Miss] - لو مفيش كاش، شغل الـ Pipeline العادي واحفظه للمرة القادمة
             process_cached_doc(full_text, chunk_size=chunk_size)
             retrieved_chunks = query_cached_rag_context(question)
             context_list = retrieved_chunks
             ctx_text = "\n\n".join(retrieved_chunks) if retrieved_chunks else "No context available."
             final_answer = ask_llm(full_prompt.format(context=ctx_text, input=question))
-            
-            # 3. إلحاق النتيجة الجديدة بالكاش الدلالي
             add_to_cache(question, final_answer)
 
         else: # Naive Mode التقليدي
