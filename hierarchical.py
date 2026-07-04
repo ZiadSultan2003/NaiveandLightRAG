@@ -1,6 +1,5 @@
 import os
-import re
-import json
+import uuid  # 🔥 تم إضافتها لمنع الكاش والتداخل
 from dotenv import load_dotenv
 from groq import Groq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -11,7 +10,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 load_dotenv()
 
 STORAGE_DIR = "./hierarchical_storage"
-TARGET_MODEL = "llama-3.3-70b-versatile"
+TARGET_MODEL = "llama-3.1-8b-instant"
 
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2",
@@ -19,9 +18,14 @@ embeddings = HuggingFaceEmbeddings(
 )
 
 global_hierarchical_db = None
+current_h_collection = "hierarchical_default" # 🔥 تتبع الكوليكشن النشطة
 
 def generate_chunk_summary(chunk_text: str) -> str:
     """توليد ملخص سريع ومكثف للقطعة الكبيرة عبر الـ LLM"""
+    # حماية: لو القطعة شبه فاضية أو فيها فواصل فقط لا تضيع وقت الـ API
+    if len(chunk_text.strip()) < 30:
+        return "Short transition text."
+        
     api_key = os.getenv("GROQ_API_KEY")
     client = Groq(api_key=api_key)
     try:
@@ -39,7 +43,7 @@ def generate_chunk_summary(chunk_text: str) -> str:
 
 def process_hierarchical_doc(full_text: str, chunk_size: int = 600):
     """بناء الشجرة الهرمية: Parent -> Summary -> Child"""
-    global global_hierarchical_db
+    global global_hierarchical_db, current_h_collection
     
     # ─── 🛠️ الحل الآمن للـ Windows لمنع File Locking Error ───
     if global_hierarchical_db is not None:
@@ -50,10 +54,12 @@ def process_hierarchical_doc(full_text: str, chunk_size: int = 600):
             print(f"⚠️ Note: Could not delete hierarchical collection cleanly: {e}")
         global_hierarchical_db = None
 
+    # توليد اسم فريد يمنع تداخل الملفات نهائياً
+    current_h_collection = f"h_col_{uuid.uuid4().hex[:8]}"
+
     child_size = chunk_size
     parent_size = chunk_size * 3  # القطعة الكبيرة تضمن سياق عريض جداً
     
-    # 1. تقطيع النص لـ Parents كبار
     parent_splitter = RecursiveCharacterTextSplitter(chunk_size=parent_size, chunk_overlap=int(parent_size * 0.1))
     parent_texts = parent_splitter.split_text(full_text)
     
@@ -62,14 +68,15 @@ def process_hierarchical_doc(full_text: str, chunk_size: int = 600):
     
     print(f"⏳ Generating Summaries for {len(parent_texts)} Parent Chapters...")
     
-    # 2. لكل Parent، هنولد ملخص، ونقطعها لـ Children أصغر
     for i, p_text in enumerate(parent_texts):
-        # توليد ملخص سريع للـ Parent ده
+        # تنظيف النص لو فيه بواقي فواصل قديمة
+        if "NEXT FILE CONTEXT" in p_text:
+            p_text = p_text.replace("--- NEXT FILE CONTEXT ---", "").strip()
+            
         p_summary = generate_chunk_summary(p_text)
-        
         sub_chunks = child_splitter.split_text(p_text)
+        
         for c_text in sub_chunks:
-            # نربط الـ Child بالـ Parent والـ Summary معاً في الـ Metadata
             doc = Document(
                 page_content=c_text,
                 metadata={
@@ -80,23 +87,27 @@ def process_hierarchical_doc(full_text: str, chunk_size: int = 600):
             )
             child_documents.append(doc)
 
-    # 3. حفظ الـ Children الـ Vectors في Chroma
     global_hierarchical_db = Chroma.from_documents(
         child_documents, 
         embeddings, 
-        persist_directory=STORAGE_DIR
+        persist_directory=STORAGE_DIR,
+        collection_name=current_h_collection # 🔥 ربط بالاسم الديناميكي الجديد
     )
-    print(f"✅ [Hierarchical RAG Indexed] - Total Leaf/Child Chunks: {len(child_documents)}")
+    print(f"✅ [Hierarchical RAG Indexed] - Collection: {current_h_collection} - Total Leaf/Child Chunks: {len(child_documents)}")
 
 def query_hierarchical(question: str) -> list:
-    """البحث في الـ Children واسترجاع الـ السياق الهرمي المدمج (الـ Parent + ملخصه)"""
-    global global_hierarchical_db
+    """البحث في الـ Children واسترجاع الـ السياق الهرمي المدمج"""
+    global global_hierarchical_db, current_h_collection
     if global_hierarchical_db is None:
-        global_hierarchical_db = Chroma(persist_directory=STORAGE_DIR, embedding_function=embeddings)
+        global_hierarchical_db = Chroma(
+            persist_directory=STORAGE_DIR, 
+            embedding_function=embeddings,
+            collection_name=current_h_collection
+        )
         
     try:
-        # البحث عن أفضل قطع دقيقة
-        retrieved_children = global_hierarchical_db.as_retriever(search_kwargs={"k": 3}).invoke(question)
+        # 🔥 زيادة الـ k لـ 6 عشان يلقط فروع أكتر وتغطي الملفين
+        retrieved_children = global_hierarchical_db.as_retriever(search_kwargs={"k": 6}).invoke(question)
         
         hierarchical_contexts = []
         seen_parents = set()
@@ -108,11 +119,10 @@ def query_hierarchical(question: str) -> list:
             if parent_text and parent_text not in seen_parents:
                 seen_parents.add(parent_text)
                 
-                # صياعة الـ Hierarchical: ندمج الملخص مع النص الكامل للـ Parent لتغذية الـ LLM بأعلى جودة سياق
                 formatted_context = f"[Section Overview/Summary]: {parent_summary}\n[Detailed Section Content]: {parent_text}"
                 hierarchical_contexts.append(formatted_context)
                 
-        return hierarchical_contexts[:2]  # إرجاع أفضل سياقين هرميين مدمجين لعدم تخطي الـ Context Window
+        return hierarchical_contexts[:3]  # رجع أعلى 3 سياقات
     except Exception as e:
         print(f"❌ Error in Hierarchical Search: {e}")
         return []

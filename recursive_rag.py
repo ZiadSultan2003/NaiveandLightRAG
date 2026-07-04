@@ -1,4 +1,5 @@
 import os
+import uuid  # 🔥 تم إضافتها لتوليد أسماء كوليكشن ديناميكية وفريدة
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
@@ -11,8 +12,9 @@ embeddings = HuggingFaceEmbeddings(
     model_kwargs={'device': 'cpu'}
 )
 
-# متغير عام لحفظ الداتا بيس في الميموري
+# متغيرات عامة لحفظ الداتا بيس واسم الكوليكشن النشطة في الميموري
 global_db = None
+current_collection_name = "recursive_default"  # 🔥 لتتبع الكوليكشن النشطة عبر الطلبات
 
 def process_recursive_doc(full_text: str, chunk_size: int = 600):
     """
@@ -20,17 +22,20 @@ def process_recursive_doc(full_text: str, chunk_size: int = 600):
     الـ chunk_size هو الـ Child الصغير للبحث الدقيق.
     الـ Parent هيكون ضعف الحجم للسياق الكامل.
     """
-    global global_db
+    global global_db, current_collection_name
     
     # ─── 🛠️ الحل الآمن للـ Windows لمنع File Locking Error ───
     if global_db is not None:
         try:
             # مسح الـ Collection الحالية وتفريغ البيانات برفق بدل مسح الفولدر بالكامل
             global_db.delete_collection()
-            print("🧹 Existing Chroma collection cleared safely.")
+            print(f"🧹 Existing Chroma collection [{current_collection_name}] cleared safely.")
         except Exception as e:
             print(f"⚠️ Note: Could not delete collection cleanly: {e}")
         global_db = None
+
+    # توليد اسم كوليكشن فريد تماماً لهذه الجلسة لمنع الـ Overriding والـ Caching
+    current_collection_name = f"rec_col_{uuid.uuid4().hex[:8]}"
 
     child_size = chunk_size
     parent_size = chunk_size * 2
@@ -56,23 +61,33 @@ def process_recursive_doc(full_text: str, chunk_size: int = 600):
             )
             child_documents.append(doc)
 
-    # 3. حفظ الـ Children الـ Vectors في Chroma
+    # حماية ضد النصوص الفارغة
+    if not child_documents:
+        child_documents = [Document(page_content="Placeholder context because text parsing returned empty.", metadata={"parent_content": "Placeholder"})]
+
+    # 3. حفظ الـ Children الـ Vectors في Chroma مع اسم كوليكشن فريد
     global_db = Chroma.from_documents(
         child_documents, 
         embeddings, 
-        persist_directory=STORAGE_DIR
+        persist_directory=STORAGE_DIR,
+        collection_name=current_collection_name  # 🔥 السطر السحري لمنع الكاش القديم
     )
-    print(f"✅ [Custom Recursive RAG Cleanly Indexed] - Total Child Chunks: {len(child_documents)}")
+    print(f"✅ [Custom Recursive RAG Cleanly Indexed] - Collection: {current_collection_name} - Total Child Chunks: {len(child_documents)}")
 
 def query_recursive(question: str) -> list:
     """البحث بالـ Child واسترجاع الـ Parent الأصلي فوراً"""
-    global global_db
+    global global_db, current_collection_name
+    
     if global_db is None:
-        global_db = Chroma(persist_directory=STORAGE_DIR, embedding_function=embeddings)
+        global_db = Chroma(
+            persist_directory=STORAGE_DIR, 
+            embedding_function=embeddings,
+            collection_name=current_collection_name
+        )
         
     try:
-        # البحث في الـ Children
-        retrieved_children = global_db.as_retriever(search_kwargs={"k": 4}).invoke(question)
+        # البحث في الـ Children بقيمة k=10 لضمان البحث الموسع والوصول للملفين
+        retrieved_children = global_db.as_retriever(search_kwargs={"k": 20}).invoke(question)
         
         # استخراج الـ Parents الكبار من الـ Metadata (مع منع التكرار باستخدام set)
         parent_contexts = []
@@ -83,7 +98,7 @@ def query_recursive(question: str) -> list:
                 seen.add(parent_text)
                 parent_contexts.append(parent_text)
                 
-        return parent_contexts[:3] # إرجاع أفضل 3 قطع كبار غنية بالسياق
+        return parent_contexts[:4]  # تم رفعها لـ 4 لضمان استيعاب سياق كافٍ من الملفين معاً
     except Exception as e:
         print(f"❌ Error in Custom Recursive Search: {e}")
         return []
